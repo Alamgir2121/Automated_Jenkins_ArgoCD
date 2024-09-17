@@ -1,0 +1,45 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = 'sample-app'
+        DOCKER_TAG = 'latest'
+        DOCKER_REPO = 'p978'  // Replace with your Docker Hub username
+    }
+
+    stages {
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh 'docker build -t ${DOCKER_REPO}/${DOCKER_IMAGE}:${DOCKER_TAG} .'
+                }
+            }
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials-id', usernameVariable: 'DOCKER_HUB_USERNAME', passwordVariable: 'DOCKER_HUB_PASSWORD')]) {
+                        sh 'echo $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USERNAME --password-stdin'
+                    }
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    sh 'docker push ${DOCKER_REPO}/${DOCKER_IMAGE}:${DOCKER_TAG}'
+                }
+            }
+        }
+
+        stage('Clean Up') {
+            steps {
+                script {
+                    sh 'docker rmi ${DOCKER_REPO}/${DOCKER_IMAGE}:${DOCKER_TAG} || true'
+                }
+            }
+        }
+    }
+}
